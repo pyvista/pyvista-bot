@@ -30,7 +30,7 @@ Output:
 """
 
     src_response = openai.Completion.create(
-        engine="text-davinci-002",
+        engine="text-davinci-003",
         prompt=gpt_prompt,
         temperature=0.5,
         max_tokens=512,
@@ -131,6 +131,39 @@ def strip(
     >>> stripped.plot(show_edges=True, line_width=3)
 
     """
+    alg = _vtk.vtkStripper()
+    alg.SetInputDataObject(self)
+    alg.SetJoinContiguousSegments(join)
+    alg.SetMaximumLength(max_length)
+    alg.SetPassCellDataAsFieldData(pass_cell_data)
+    alg.SetPassThroughCellIds(pass_cell_ids)
+    alg.SetPassThroughPointIds(pass_point_ids)
+    _update_alg(alg, progress_bar, 'Stripping Mesh')
+    return _get_output(alg)
+
+# unit test setup
+
+import pyvista as pv
+
+
+def test_strips():
+    # init with strips test
+    vertices = np.array([[0, 0, 0], [1, 0, 0], [1, 0.5, 0], [0, 0.5, 0]])
+    strips = np.array([4, 0, 1, 3, 2])
+    strips_init = pyvista.PolyData(vertices, strips=strips)
+    assert len(strips_init.strips) == len(strips)
+
+    # add strips using the setter
+    strips_setter = pyvista.PolyData(vertices)
+    strips_setter.strips = strips
+    assert len(strips_setter.strips) == len(strips)
+
+    # test n_strips function
+    strips = np.array([[4, 0, 1, 3, 2], [4, 1, 2, 3, 0]])
+    strips_stack = np.hstack(strips)
+    n_strips_test = pyvista.PolyData(vertices, strips=strips_stack)
+    assert n_strips_test.n_strips == len(strips)
+
 
 Input:
 {vtk_info_out['cls_name']}
@@ -145,7 +178,7 @@ Output:
     if verbose:
         print(gpt_prompt)
     response = openai.Completion.create(
-        engine="text-davinci-002",
+        engine="text-davinci-003",
         prompt=gpt_prompt,
         temperature=0.5,
         max_tokens=1024,
@@ -160,6 +193,7 @@ Output:
         print(text)
     return text
 
+
 print('Acquiring VTK class definitions...')
 vtk_info_in = get_cls_info('vtkStripper')
 vtk_info_out = get_cls_info('vtkEllipseArcSource')
@@ -168,11 +202,11 @@ print('Querying OpenAI...')
 docstr = get_docstr(vtk_info_in, vtk_info_out, verbose=True)
 src = get_src(vtk_info_in, vtk_info_out)
 
-fname = 'bane1.py'
-with open(fname, 'w') as fid:
-    fid.write('import vtk as _vtk\n')
-    fid.write('from pyvista.core.filters import _get_output, _update_alg\n')
-    fid.write(docstr)
-    fid.write('\n')
-    fid.write('\n'.join(['    ' + line for line in src.splitlines()]))
+# fname = 'bane1.py'
+# with open(fname, 'w') as fid:
+#     fid.write('import vtk as _vtk\n')
+#     fid.write('from pyvista.core.filters import _get_output, _update_alg\n')
+#     fid.write(docstr)
+#     fid.write('\n')
+#     fid.write('\n'.join(['    ' + line for line in src.splitlines()]))
 
