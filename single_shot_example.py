@@ -1,5 +1,5 @@
 """
-Generate a fine tuned model for pyvista.
+Example: Generate a pyvista source function using a single shot.
 
 """
 import inspect
@@ -19,7 +19,7 @@ openai.api_key = API_KEY
 
 def gen_src(pv_func, test_func, vtk_info_in, vtk_info_out):
     pv_source = get_body(pv_func)
-    pv_test_source = inspect.getsource(test_func)
+    # pv_test_source = inspect.getsource(test_func)
 
     gpt_prompt = f"""
 Input:
@@ -36,7 +36,7 @@ Input:
 
 Output:
 """
-    tok = tokenizer(gpt_prompt)
+    # tok = tokenizer(gpt_prompt)
     # if len(tok['input_ids']) > 2048:
     #     raise ValueError('Input prompt too large')
 
@@ -44,7 +44,7 @@ Output:
         engine="text-davinci-003",
         prompt=gpt_prompt,
         temperature=0.5,
-        max_tokens=4097 - len(tok['input_ids']),
+        max_tokens=2048,
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0,
