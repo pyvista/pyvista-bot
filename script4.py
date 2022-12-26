@@ -1,6 +1,11 @@
+import importlib.util
+import sys
+import glob
+import os
+from tqdm import tqdm
+import pyvista
 import os
 import inspect
-
 
 def find_function_calls(lib, func_name, recursive=True):
     SEARCHED = set()
@@ -15,7 +20,6 @@ def find_function_calls(lib, func_name, recursive=True):
         """
         SEARCHED.add(lib)
         for _, obj in inspect.getmembers(lib):
-            print(obj)
             if inspect.isfunction(obj) or inspect.ismethod(obj):
 
                 try:
@@ -26,20 +30,16 @@ def find_function_calls(lib, func_name, recursive=True):
                 if func_name in source:
                     CALLERS.add(obj)
 
-            elif inspect.isclass(obj) or inspect.ismodule(obj):
-                # coverage recusive case
-                if obj not in SEARCHED and 'pyvista' in str(obj):
-                    _find_function_calls(obj, func_name, recursive)
+            if recursive:
+                if inspect.isclass(obj) or inspect.ismodule(obj):
+                    # cover recusive case
+                    if obj not in SEARCHED and 'pyvista' in str(obj):
+                        _find_function_calls(obj, func_name, recursive)
 
     _find_function_calls(lib, func_name, recursive)
 
-    return CALLERS
+    return list(CALLERS)
 
-
-import importlib.util
-import sys
-import glob
-import os
 
 # load tests as modules
 TEST_PATH = os.path.expanduser('~/python/pyvista/tests/**.py')
@@ -54,19 +54,44 @@ for test_file in test_files:
     spec.loader.exec_module(mod)
 
 # Example usage
-import pyvista
 
+
+vtk_class = 'vtkAppendPolyData'
 
 # identify function in pyvista
-out = find_function_calls(pyvista, 'vtkStripper')
-func = out.pop()
-inspect.getsource(func)
+out = find_function_calls(pyvista, vtk_class)
+pv_func = out[0]
 
 # identify any tests that use this method
-func_name = func.__name__
+func_name = pv_func.__name__
+
 
 test_funcs = []
 for test_mod in test_modules:
-    funcs = find_function_calls(test_mod, func_name)
-    
-    # test_funcs.append(
+    funcs = find_function_calls(test_mod, func_name, recursive=False)
+    for func in funcs:
+        if func.__name__.startswith('test_'):
+            test_funcs.append(func)
+
+if not len(test_funcs):
+    raise RuntimeError(f'Unable to locate test for {func_name}')
+
+# prioritize the test whose name includes the function
+ideal_name = f'test_{pv_func.__name__}'
+
+test_func = None
+for func in test_funcs:
+    if ideal_name == func.__name__:
+        test_func = func
+
+if test_func is None:
+    for func in test_funcs:
+        if ideal_name in func.__name__:
+            test_func = func
+
+if test_func is None:
+    test_func = test_funcs[0]
+
+
+return pv_func, test_func
+
