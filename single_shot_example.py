@@ -1,5 +1,5 @@
 """
-Example: Generate a pyvista source function using a single shot.
+Example: Generate a pyvista source function using single shot training.
 
 """
 import inspect
@@ -22,6 +22,8 @@ def gen_src(pv_func, test_func, vtk_info_in, vtk_info_out):
     # pv_test_source = inspect.getsource(test_func)
 
     gpt_prompt = f"""
+Generate the source code of a single Python function given this input, output pattern.
+
 Input:
 {vtk_info_in['cls_name']}
 {vtk_info_in['fnames']}
@@ -66,4 +68,3 @@ vtk_info_out = get_cls_info('vtkEllipseArcSource')
 print('Querying OpenAI...')
 out = gen_src(pv_func, test_func, vtk_cls_info, vtk_info_out)
 print(out)
-
